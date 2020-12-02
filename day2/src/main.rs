@@ -12,20 +12,12 @@ struct Policy {
 
 impl Policy {
     pub fn validate(&self) -> bool {
-        let mut count: u16 = 0;
-        for c in self.pass.chars() {
-            if c != self.char {
-                continue;
-            }
-            count += 1;
-            if count > self.upper {
-                return false;
-            }
-        }
+        let count: u16 = self.pass.chars().filter(|c| *c == self.char).count() as u16;
         return self.lower <= count && count <= self.upper;
     }
 
     pub fn validate2(&self) -> bool {
+        // this is fucking O(n) and I hate it.
         let chars: Vec<char> = self.pass.chars().collect();
         (*chars.get(self.lower as usize - 1).unwrap() == self.char) ^ (*chars.get(self.upper as usize - 1).unwrap() == self.char)
     }
@@ -39,22 +31,10 @@ impl FromStr for Policy {
         if sections.len() != 3 {
             return Err("Invalid Policy".to_string());
         }
-        let range: Vec<u16> = match sections.get(0) {
-            Some(v) => match v.split("-").map(|s| s.parse::<u16>()).collect() {
-                Ok(v) => v,
-                Err(e) => return Err(format!("{}", e))
-            },
-            None => return Err("oh no".to_string())
-        };
+        let range: Vec<u16> = sections.get(0).unwrap().split("-").map(|s| s.parse::<u16>()).collect::<Result<Vec<u16>, _>>().unwrap();
         Ok(Policy {
-            lower: match range.get(0) {
-                Some(v) => *v,
-                None => return Err("lower not found".to_string())
-            },
-            upper: match range.get(1) {
-                Some(v) => *v,
-                None => return Err("upper not found".to_string())
-            },
+            lower: *range.get(0).unwrap(),
+            upper: *range.get(1).unwrap(),
             char: sections.get(1).unwrap().chars().nth(0).unwrap(),
             pass: sections.get(2).unwrap().to_string(),
         })
